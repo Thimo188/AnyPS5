@@ -1,5 +1,6 @@
 #pragma once
 #include "prx/libc/include/general/VabiMacros.hpp"
+#include <cstdint>
 
 extern "C" {
 int APS5_VABI u_strToTitle_nid_postfix();
@@ -7,7 +8,7 @@ int APS5_VABI ucal_getAttribute_nid_postfix();
 int APS5_VABI ucal_getDayOfWeekType_nid_postfix();
 int APS5_VABI ucal_openTimeZoneIDEnumeration_nid_postfix();
 int APS5_VABI ucal_openTimeZones_nid_postfix();
-int APS5_VABI ucol_countAvailable_nid_postfix();
+std::int32_t APS5_VABI ucol_countAvailable_nid_postfix();
 int APS5_VABI ucol_getAvailable_nid_postfix();
 int APS5_VABI ucol_getContractionsAndExpansions_nid_postfix();
 int APS5_VABI ucol_getKeywordValues_nid_postfix();

@@ -23,10 +23,6 @@ int APS5_VABI ucal_openTimeZones_nid_postfix() {
     NotImplemented_nid_no_patch(__func__);
 }
 
-int APS5_VABI ucol_countAvailable_nid_postfix() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
 int APS5_VABI ucol_getAvailable_nid_postfix() {
     NotImplemented_nid_no_patch(__func__);
 }
