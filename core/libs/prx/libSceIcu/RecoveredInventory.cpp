@@ -27,10 +27,6 @@ int APS5_VABI ucol_getContractionsAndExpansions_nid_postfix() {
     NotImplemented_nid_no_patch(__func__);
 }
 
-int APS5_VABI ucol_getKeywordValues_nid_postfix() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
 int APS5_VABI ucol_getKeywordValuesForLocale_nid_postfix() {
     NotImplemented_nid_no_patch(__func__);
 }

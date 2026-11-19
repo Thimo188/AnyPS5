@@ -11,7 +11,7 @@ int APS5_VABI ucal_openTimeZones_nid_postfix();
 std::int32_t APS5_VABI ucol_countAvailable_nid_postfix();
 const char* APS5_VABI ucol_getAvailable_nid_postfix(std::int32_t index);
 int APS5_VABI ucol_getContractionsAndExpansions_nid_postfix();
-int APS5_VABI ucol_getKeywordValues_nid_postfix();
+struct UEnumeration* APS5_VABI ucol_getKeywordValues_nid_postfix(const char* keyword, std::int32_t* status);
 int APS5_VABI ucol_getKeywordValuesForLocale_nid_postfix();
 int APS5_VABI ucol_getRules_nid_postfix();
 int APS5_VABI ucol_getStrength_nid_postfix();
