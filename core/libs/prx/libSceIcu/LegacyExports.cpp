@@ -818,10 +818,6 @@ int APS5_VABI utrie2_get32FromLeadSurrogateCodeUnit_nid_postfix() {
     NotImplemented_nid_no_patch(__func__);
 }
 
-int APS5_VABI ures_getLocale_nid_postfix() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
 int APS5_VABI _ZNK6icu_686Locale8hashCodeEv_nid_postfix() {
     NotImplemented_nid_no_patch(__func__);
 }

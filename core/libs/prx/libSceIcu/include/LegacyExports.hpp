@@ -195,7 +195,6 @@ int APS5_VABI ures_getStringByKeyWithFallback_nid_postfix();
 int APS5_VABI sceIcuLegacyUnknown_3bI32XONrnU_nid_no_patch();
 int APS5_VABI _ZN6icu_6813UnicodeStringaSEOS0__nid_postfix();
 int APS5_VABI utrie2_get32FromLeadSurrogateCodeUnit_nid_postfix();
-int APS5_VABI ures_getLocale_nid_postfix();
 int APS5_VABI _ZNK6icu_686Locale8hashCodeEv_nid_postfix();
 int APS5_VABI sceIcuLegacyUnknown_3qA1USjroSE_nid_no_patch();
 int APS5_VABI sceIcuLegacyUnknown_3reaN7bH25E_nid_no_patch();

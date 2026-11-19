@@ -4,6 +4,7 @@
 #include "prx/libkernel/libkernel.hpp"
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -13,11 +14,15 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 namespace {
 
 using IcuRecoveredTest::Require;
+
+static_assert(std::is_same_v<decltype(&ures_getLocale_nid_postfix),
+    const char* (APS5_VABI*)(const UResourceBundle*, std::int32_t*)>);
 
 struct Package {
     std::vector<std::max_align_t> storage;
@@ -70,6 +75,16 @@ struct Bundle {
         const auto* expected = ResourceOracleKey(native);
         Require(bool(actual) == bool(expected), "resource key nullability matches native");
         if (actual) Require(std::string_view(actual) == expected, "resource key text matches native");
+        for (const auto incoming : {0, -1, -124, 7}) {
+            auto status = incoming;
+            auto nativeStatus = incoming;
+            const auto* nativeLocale = ResourceOracleLocale(native, &nativeStatus);
+            errno = 73;
+            const auto* locale = ures_getLocale_nid_postfix(guest, &status);
+            Require(errno == 73, "resource locale lookup preserves errno");
+            Require(bool(locale) == bool(nativeLocale) && status == nativeStatus, "resource locale result and status match native");
+            if (locale) Require(std::string_view(locale) == nativeLocale, "resource locale text matches native");
+        }
     }
 };
 
@@ -222,10 +237,13 @@ void Status() {
             ures_getStringByIndex_nid_postfix(invalid, -1, length, status) == nullptr, "null/failed status precedes string handles and lengths");
         Require(ures_getBinary_nid_postfix(invalid, length, status) == nullptr && ures_getIntVector_nid_postfix(invalid, length, status) == nullptr &&
             ures_getInt_nid_postfix(invalid, status) == -1, "null/failed status precedes scalar/binary/vector access");
+        Require(ures_getLocale_nid_postfix(invalid, status) == nullptr, "null/failed status precedes resource locale handle access");
         Require(failed == incoming, "failed status remains untouched");
     }
     Require(ures_getSize_nid_postfix(nullptr) == 0 && ures_getType_nid_postfix(nullptr) == -1 && ures_getKey_nid_postfix(nullptr) == nullptr,
         "stateless null-resource getters preserve native return shapes");
+    errno = 79;
+    Require(ures_getLocale_nid_postfix(nullptr, nullptr) == nullptr && errno == 79, "null resource and status return no locale without changing errno");
     std::int32_t status = 0;
     std::int32_t outputLength = 0x55;
     Require(ures_getByKey(nullptr, key, fill, &status) == fill && status == 1, "null parent reports argument error before key/fillIn access");
@@ -233,6 +251,8 @@ void Status() {
     Require(ures_getByIndex_nid_postfix(nullptr, -1, fill, &status) == fill && status == 1, "null index parent reports argument error before fillIn access");
     status = 0;
     Require(ures_getString_nid_postfix(nullptr, &outputLength, &status) == nullptr && status == 1 && outputLength == 0x55, "null value source leaves unused length untouched");
+    status = 0;
+    Require(ures_getLocale_nid_postfix(nullptr, &status) == nullptr && status == 1, "null locale source reports illegal argument");
     Bundle root;
     for (auto incoming : {-1, -124, -128}) String(root, 1, "greeting", 0, incoming);
     status = 0;
@@ -240,6 +260,8 @@ void Status() {
     status = 0;
     Refuses([&] { ures_openDirect_nid_postfix(nullptr, nullptr, &status); });
     Refuses([&] { ures_getByKey(root.guest, "number", invalid, &status); });
+    status = 0;
+    Refuses([&] { ures_getLocale_nid_postfix(invalid, &status); });
     ures_close(nullptr);
 }
 
@@ -262,6 +284,8 @@ void Lifetime() {
         auto* fresh = ures_openDirect_nid_postfix(nullptr, "aps5ResourceFixture", &status);
         Require(fresh && fresh != closed, "closed resource identities are not reused");
         Refuses([&] { ures_getType_nid_postfix(closed); });
+        status = 0;
+        Refuses([&] { ures_getLocale_nid_postfix(closed, &status); });
         ures_close(fresh);
     }
     auto* numbering = unumsys_openByName_nid_postfix("latn", &status);
@@ -298,6 +322,7 @@ void Memory() {
     Require(sceKernelMprotect(data + page, page, 1) == 0);
     Refuses([&] { ures_getStringByKey(root.guest, "greeting", length, status); });
     Refuses([&] { ures_getInt_nid_postfix(root.guest, status); });
+    Refuses([&] { ures_getLocale_nid_postfix(root.guest, reinterpret_cast<std::int32_t*>(data)); });
     Require(sceKernelMprotect(data + page, page, 3) == 0);
     *status = 7;
     Require(sceKernelMprotect(data + page, page, 1) == 0);
