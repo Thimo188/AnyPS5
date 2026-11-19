@@ -684,7 +684,6 @@ int APS5_VABI _ZN6icu_6810Normalizer12isNormalizedERKNS_13UnicodeStringE18UNorma
 int APS5_VABI sceIcuLegacyUnknown_GWjCpRNGl6E_nid_no_patch();
 int APS5_VABI _ZN6icu_686LocaleC1ENS0_11ELocaleTypeE_nid_postfix();
 int APS5_VABI ucnv_getCCSID_nid_postfix();
-int APS5_VABI ures_resetIterator_nid_postfix();
 int APS5_VABI _ZN6icu_6828FilteredBreakIteratorBuilderC2Ev_nid_postfix();
 int APS5_VABI _ZNK6icu_6810CharString8containsENS_11StringPieceE_nid_postfix();
 int APS5_VABI _ZN6icu_6813LocaleUtility12isFallbackOfERKNS_13UnicodeStringES3__nid_postfix();

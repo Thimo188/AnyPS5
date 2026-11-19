@@ -2893,10 +2893,6 @@ int APS5_VABI ucnv_getCCSID_nid_postfix() {
     NotImplemented_nid_no_patch(__func__);
 }
 
-int APS5_VABI ures_resetIterator_nid_postfix() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
 int APS5_VABI _ZN6icu_6828FilteredBreakIteratorBuilderC2Ev_nid_postfix() {
     NotImplemented_nid_no_patch(__func__);
 }
