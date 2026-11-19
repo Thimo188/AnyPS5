@@ -11,6 +11,7 @@
 #include <cstring>
 #include <source_location>
 #include <stdexcept>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -21,6 +22,22 @@ struct AuthorityKeyId {
     LibreSslStack* issuer;
     Asn1String* serial;
 };
+
+struct X509WithExtensions {
+    LibreSslX509 prefix;
+    char* name;
+    LibreSslStack* exData;
+    std::int64_t exPathLength;
+    std::int64_t exProxyPathLength;
+    std::uint64_t exFlags;
+    std::uint64_t exKeyUsage;
+    std::uint64_t exExtendedKeyUsage;
+    std::uint64_t exNsCert;
+    Asn1String* subjectKeyId;
+};
+
+static_assert(sizeof(X509WithExtensions) == 104);
+static_assert(std::is_same_v<decltype(&X509_check_akid_nid_postfix), int (APS5_VABI*)(void*, void*)>);
 
 std::unordered_map<void*, std::size_t> allocations;
 std::unordered_set<void*> zeroed;
@@ -143,8 +160,76 @@ void TestNonNull() {
     RequireInvalidArgument([&] { AUTHORITY_KEYID_free_nid_postfix(unreadable); });
     Require(errno == EDOM);
     RequireNotImplemented([&] { PKCS7_free_nid_postfix(unreadable); });
-    RequireNotImplemented([&] { X509_check_akid_nid_postfix(nullptr, unreadable); });
-    RequireNotImplemented([&] { X509_check_akid_nid_postfix(unreadable, unreadable); });
+    RequireInvalidArgument([&] { X509_check_akid_nid_postfix(nullptr, unreadable); });
+    RequireInvalidArgument([&] { X509_check_akid_nid_postfix(unreadable, unreadable); });
+}
+
+void TestCheckAkid() {
+    unsigned char keyBytes[]{1, 2, 3};
+    unsigned char otherKeyBytes[]{1, 2, 4};
+    unsigned char serialBytes[]{7};
+    unsigned char otherSerialBytes[]{8};
+    Asn1String key{3, 4, keyBytes, 0};
+    Asn1String otherKey{3, 4, otherKeyBytes, 0};
+    Asn1String serial{1, 2, serialBytes, 0};
+    Asn1String otherSerial{1, 2, otherSerialBytes, 0};
+    LibreSslX509CertInfo info{};
+    info.serialNumber = &serial;
+    X509WithExtensions certificate{};
+    certificate.prefix.certificateInfo = &info;
+    certificate.subjectKeyId = &key;
+    AuthorityKeyId id{};
+    Require(X509_check_akid_nid_postfix(reinterpret_cast<void*>(std::uintptr_t{1}), &id) == 0);
+    id.keyId = &key;
+    Require(X509_check_akid_nid_postfix(&certificate, &id) == 0);
+    id.keyId = &otherKey;
+    Require(X509_check_akid_nid_postfix(&certificate, &id) == 30);
+    id.keyId = nullptr;
+    id.serial = &serial;
+    Require(X509_check_akid_nid_postfix(&certificate, &id) == 0);
+    id.serial = &otherSerial;
+    Require(X509_check_akid_nid_postfix(&certificate, &id) == 31);
+    Asn1String negativeSerial{1, 0x102, serialBytes, 0};
+    id.serial = &negativeSerial;
+    Require(X509_check_akid_nid_postfix(&certificate, &id) == 31);
+
+    unsigned char nameBytes[]{9, 8, 7};
+    unsigned char otherNameBytes[]{9, 8, 6};
+    LibreSslX509Name certificateName{};
+    certificateName.canonEnc = nameBytes;
+    certificateName.canonEnclen = 3;
+    info.issuer = &certificateName;
+    LibreSslX509Name matchingName{};
+    matchingName.canonEnc = nameBytes;
+    matchingName.canonEnclen = 3;
+    LibreSslX509Name differentName{};
+    differentName.canonEnc = otherNameBytes;
+    differentName.canonEnclen = 3;
+    LibreSslGeneralName dns{2, &key};
+    LibreSslGeneralName directory{4, &matchingName};
+    char* entries[]{reinterpret_cast<char*>(&dns), reinterpret_cast<char*>(&directory)};
+    LibreSslStack names{2, entries, 0, 2, nullptr};
+    id.serial = nullptr;
+    id.issuer = &names;
+    Require(X509_check_akid_nid_postfix(&certificate, &id) == 0);
+    directory.value = &differentName;
+    Require(X509_check_akid_nid_postfix(&certificate, &id) == 31);
+    directory.value = nullptr;
+    Require(X509_check_akid_nid_postfix(&certificate, &id) == 0);
+    LibreSslX509Name uncachedName{};
+    directory.value = &uncachedName;
+    RequireNotImplemented([&] { X509_check_akid_nid_postfix(&certificate, &id); });
+
+    id.keyId = &otherKey;
+    id.serial = &otherSerial;
+    directory.value = &differentName;
+    Require(X509_check_akid_nid_postfix(&certificate, &id) == 30);
+    errno = EDOM;
+    id.keyId = &key;
+    id.serial = &serial;
+    directory.value = &matchingName;
+    Require(X509_check_akid_nid_postfix(&certificate, &id) == 0);
+    Require(errno == EDOM);
 }
 
 void TestAuthorityKeyId() {
@@ -173,6 +258,7 @@ int main() {
     ApplicationHeapRegister_nid_no_patch(api.data());
     TestNull();
     TestNonNull();
+    TestCheckAkid();
     TestAuthorityKeyId();
     std::puts("LibreSSL3 X509 item free tests passed");
 }
