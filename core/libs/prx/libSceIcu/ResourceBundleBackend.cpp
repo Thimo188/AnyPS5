@@ -1,4 +1,5 @@
 #include "prx/libSceIcu/ResourceBundleBackend.hpp"
+#include "uresimp.h"
 #include "unicode/ures.h"
 #include <type_traits>
 
@@ -34,6 +35,12 @@ const char16_t* String_nid_no_patch(const void* handle, std::int32_t mode, const
     if (mode == 0) result = ures_getString(source, length, target);
     else if (mode == 1) result = ures_getStringByKey(source, key, length, target);
     else result = ures_getStringByIndex(source, index, length, target);
+    if (status) *status = error;
+    return result;
+}
+const char16_t* StringByKeyWithFallback_nid_no_patch(const void* handle, const char* key, std::int32_t* length, std::int32_t* status) {
+    auto error = status ? static_cast<UErrorCode>(*status) : U_ZERO_ERROR;
+    const auto* result = ures_getStringByKeyWithFallback(static_cast<const UResourceBundle*>(handle), key, length, status ? &error : nullptr);
     if (status) *status = error;
     return result;
 }

@@ -83,7 +83,8 @@ void Refuses(Function&& function) {
 const char16_t* GuestString(const UResourceBundle* handle, int mode, const char* key, int index, std::int32_t* length, std::int32_t* status) {
     if (mode == 0) return ures_getString_nid_postfix(handle, length, status);
     if (mode == 1) return ures_getStringByKey(handle, key, length, status);
-    return ures_getStringByIndex_nid_postfix(handle, index, length, status);
+    if (mode == 2) return ures_getStringByIndex_nid_postfix(handle, index, length, status);
+    return ures_getStringByKeyWithFallback_nid_postfix(handle, key, length, status);
 }
 
 void String(const Bundle& bundle, int mode = 0, const char* key = nullptr, int index = 0, std::int32_t incoming = 0, bool nullLength = false) {
@@ -128,6 +129,9 @@ void Literals() {
     std::int32_t length = -1;
     const auto* greeting = ures_getStringByKey(root.guest, "greeting", &length, &status);
     Require(greeting && status <= 0 && std::u16string_view(greeting, length) == u"h\u00e9llo \u4e16\u754c", "fixed Unicode string");
+    String(root, 3, "greeting");
+    String(root, 3, "nested/word");
+    String(root, 3, "missing");
     Bundle number(root, "number");
     Require(ures_getInt_nid_postfix(number.guest, &status) == 1234 && status <= 0, "fixed signed integer");
     Bundle negative(root, "negative");
@@ -219,7 +223,9 @@ void Status() {
         Require(ures_getByKey(invalid, key, fill, status) == fill, "null/failed status returns untouched foreign fillIn for key lookup");
         Require(ures_getByIndex_nid_postfix(invalid, -1, fill, status) == fill, "null/failed status returns untouched foreign fillIn for index lookup");
         Require(ures_getString_nid_postfix(invalid, length, status) == nullptr && ures_getStringByKey(invalid, key, length, status) == nullptr &&
-            ures_getStringByIndex_nid_postfix(invalid, -1, length, status) == nullptr, "null/failed status precedes string handles and lengths");
+            ures_getStringByIndex_nid_postfix(invalid, -1, length, status) == nullptr &&
+            ures_getStringByKeyWithFallback_nid_postfix(invalid, key, length, status) == nullptr,
+            "null/failed status precedes string handles and lengths");
         Require(ures_getBinary_nid_postfix(invalid, length, status) == nullptr && ures_getIntVector_nid_postfix(invalid, length, status) == nullptr &&
             ures_getInt_nid_postfix(invalid, status) == -1, "null/failed status precedes scalar/binary/vector access");
         Require(failed == incoming, "failed status remains untouched");
@@ -233,6 +239,9 @@ void Status() {
     Require(ures_getByIndex_nid_postfix(nullptr, -1, fill, &status) == fill && status == 1, "null index parent reports argument error before fillIn access");
     status = 0;
     Require(ures_getString_nid_postfix(nullptr, &outputLength, &status) == nullptr && status == 1 && outputLength == 0x55, "null value source leaves unused length untouched");
+    status = 0;
+    Require(ures_getStringByKeyWithFallback_nid_postfix(nullptr, key, &outputLength, &status) == nullptr && status == 1 && outputLength == 0x55,
+        "null fallback source leaves key and unused length untouched");
     Bundle root;
     for (auto incoming : {-1, -124, -128}) String(root, 1, "greeting", 0, incoming);
     status = 0;

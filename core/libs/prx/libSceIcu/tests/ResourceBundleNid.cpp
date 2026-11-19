@@ -55,6 +55,7 @@ void Check(const char* path, const char* package) {
     const auto key = reinterpret_cast<decltype(&ures_getKey_nid_postfix)>(import("m7ZpRaRI5LM"));
     const auto string = reinterpret_cast<decltype(&ures_getString_nid_postfix)>(import("Ei1Dn07XYs4"));
     const auto stringByKey = reinterpret_cast<decltype(&ures_getStringByKey)>(import("apt8-c9wFxQ"));
+    const auto stringByKeyWithFallback = reinterpret_cast<decltype(&ures_getStringByKeyWithFallback_nid_postfix)>(import("3WfSV0+G32g"));
     const auto stringByIndex = reinterpret_cast<decltype(&ures_getStringByIndex_nid_postfix)>(import("iyv2v10Y3ho"));
     const auto integer = reinterpret_cast<decltype(&ures_getInt_nid_postfix)>(import("rGSY5kqmIQo"));
     const auto binary = reinterpret_cast<decltype(&ures_getBinary_nid_postfix)>(import("5AKCnEfGT+Y"));
@@ -69,6 +70,8 @@ void Check(const char* path, const char* package) {
     std::int32_t length = -1;
     const auto* greeting = stringByKey(root, "greeting", &length, &status);
     Require(greeting && status <= 0 && std::u16string_view(greeting, length) == u"h\u00e9llo \u4e16\u754c", "actual NID reads Unicode string by key");
+    const auto* nested = stringByKeyWithFallback(root, "nested/word", &length, &status);
+    Require(nested && status <= 0 && std::u16string_view(nested, length) == u"nested", "actual NID reads nested string with fallback");
     auto* child = byKey(root, "number", nullptr, &status);
     Require(child && status <= 0 && type(child) == 7 && integer(child, &status) == 1234, "actual NIDs read integer resource");
     Require(byKey(root, "negative", child, &status) == child && integer(child, &status) == -7 && status <= 0, "actual NIDs reuse fillIn identity for signed integer");

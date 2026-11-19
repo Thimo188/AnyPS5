@@ -1,4 +1,5 @@
 #include "prx/libSceIcu/tests/ResourceBundleOracle.hpp"
+#include "uresimp.h"
 #include "unicode/ures.h"
 #include "unicode/udata.h"
 #include "unicode/uclean.h"
@@ -40,7 +41,8 @@ const char16_t* ResourceOracleString(const void* handle, std::int32_t mode, cons
     const char16_t* result;
     if (mode == 0) result = ures_getString(source, length, target);
     else if (mode == 1) result = ures_getStringByKey(source, key, length, target);
-    else result = ures_getStringByIndex(source, index, length, target);
+    else if (mode == 2) result = ures_getStringByIndex(source, index, length, target);
+    else result = ures_getStringByKeyWithFallback(source, key, length, target);
     if (status) *status = error;
     return result;
 }

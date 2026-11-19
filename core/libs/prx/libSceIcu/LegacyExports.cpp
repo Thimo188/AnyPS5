@@ -801,10 +801,6 @@ int APS5_VABI sceIcuLegacyUnknown_3Ty3zLmTy6E_nid_no_patch() {
 }
 APS5_EXPORT("3Ty3zLmTy6E", sceIcuLegacyUnknown_3Ty3zLmTy6E_nid_no_patch);
 
-int APS5_VABI ures_getStringByKeyWithFallback_nid_postfix() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
 int APS5_VABI sceIcuLegacyUnknown_3bI32XONrnU_nid_no_patch() {
     NotImplemented_nid_no_patch(__func__);
 }

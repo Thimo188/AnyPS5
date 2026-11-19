@@ -191,7 +191,6 @@ int APS5_VABI ucnv_toAlgorithmic_nid_postfix();
 int APS5_VABI _ZN6icu_6810Normalizer11clearBufferEv_nid_postfix();
 int APS5_VABI _ZN6icu_6813SimpleFactoryD2Ev_nid_postfix();
 int APS5_VABI sceIcuLegacyUnknown_3Ty3zLmTy6E_nid_no_patch();
-int APS5_VABI ures_getStringByKeyWithFallback_nid_postfix();
 int APS5_VABI sceIcuLegacyUnknown_3bI32XONrnU_nid_no_patch();
 int APS5_VABI _ZN6icu_6813UnicodeStringaSEOS0__nid_postfix();
 int APS5_VABI utrie2_get32FromLeadSurrogateCodeUnit_nid_postfix();

@@ -167,8 +167,9 @@ const char16_t* String(const UResourceBundle* handle, int mode, const char* key,
             status.Write(17);
             return nullptr;
         }
-        const auto input = mode == 1 ? ReadName(key) : std::string();
+        const auto input = mode == 1 || mode == 3 ? ReadName(key) : std::string();
         return Extract<char16_t>(length, status, [&](std::int32_t* count, std::int32_t* after) {
+            if (mode == 3) return IcuResourceBackend::StringByKeyWithFallback_nid_no_patch(owner->native.get(), input.c_str(), count, after);
             return IcuResourceBackend::String_nid_no_patch(owner->native.get(), mode, mode == 1 ? input.c_str() : nullptr, index, count, after);
         });
     } catch (const std::bad_alloc&) {
@@ -242,6 +243,9 @@ const char16_t* APS5_VABI ures_getString_nid_postfix(const UResourceBundle* hand
 }
 const char16_t* APS5_VABI ures_getStringByKey(const UResourceBundle* handle, const char* key, std::int32_t* length, std::int32_t* status) {
     return String(handle, 1, key, 0, length, status);
+}
+const char16_t* APS5_VABI ures_getStringByKeyWithFallback_nid_postfix(const UResourceBundle* handle, const char* key, std::int32_t* length, std::int32_t* status) {
+    return String(handle, 3, key, 0, length, status);
 }
 const char16_t* APS5_VABI ures_getStringByIndex_nid_postfix(const UResourceBundle* handle, std::int32_t index, std::int32_t* length, std::int32_t* status) {
     return String(handle, 2, nullptr, index, length, status);
