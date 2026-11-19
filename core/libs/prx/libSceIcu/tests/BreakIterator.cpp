@@ -1,6 +1,7 @@
 #include "prx/libSceIcu/libSceIcu.hpp"
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -8,6 +9,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 namespace {
@@ -24,6 +26,16 @@ void Equal(std::int32_t actual, std::int32_t expected, const char* what) {
     if (actual == expected) return;
     std::fprintf(stderr, "%s: %s: got %d, expected %d\n", Context.c_str(), what, actual, expected);
     std::abort();
+}
+
+template <typename TAction>
+bool Rejects(TAction&& action) {
+    try {
+        action();
+        return false;
+    } catch (const std::invalid_argument&) {
+        return true;
+    }
 }
 
 void Append(std::u16string& text, std::uint32_t point) {
@@ -206,6 +218,56 @@ void Api() {
     Equal(status, -128, "input warning preserved");
     Equal(ubrk_last(iterator), 2, "warning allows setText");
     ubrk_close(iterator);
+
+    iterator = Open(1);
+    std::int32_t statusValues[2]{-1, -1};
+    status = 0;
+    ubrk_setText(iterator, u"Hello 123!", -1, &status);
+    Equal(ubrk_next(iterator), 5, "word boundary");
+    Equal(ubrk_getRuleStatusVec_nid_postfix(static_cast<UBreakIterator*>(iterator), statusValues, 2, &status), 1,
+        "rule status vector count");
+    Equal(status, 0, "rule status vector success");
+    Equal(statusValues[0], 200, "rule status vector value");
+    Equal(statusValues[1], -1, "rule status vector extent");
+    status = 0;
+    statusValues[0] = -1;
+    Equal(ubrk_getRuleStatusVec_nid_postfix(static_cast<UBreakIterator*>(iterator), statusValues, 0, &status), 1,
+        "rule status vector preflight count");
+    Equal(status, 15, "rule status vector preflight overflow");
+    Equal(statusValues[0], -1, "rule status vector preflight extent");
+    status = 0;
+    Equal(ubrk_getRuleStatusVec_nid_postfix(static_cast<UBreakIterator*>(iterator), nullptr, -1, &status), 1,
+        "rule status vector negative capacity count");
+    Equal(status, 15, "rule status vector negative capacity overflow");
+    status = -128;
+    Equal(ubrk_getRuleStatusVec_nid_postfix(static_cast<UBreakIterator*>(iterator), statusValues, 1, &status), 1,
+        "rule status vector warning count");
+    Equal(status, -128, "rule status vector warning preserved");
+    status = 15;
+    statusValues[0] = -1;
+    Equal(ubrk_getRuleStatusVec_nid_postfix(static_cast<UBreakIterator*>(iterator), statusValues, 1, &status), 0,
+        "rule status vector incoming failure");
+    Equal(statusValues[0], -1, "rule status vector incoming failure extent");
+    status = 0;
+    errno = 71;
+    Expect(Rejects([&] { ubrk_getRuleStatusVec_nid_postfix(
+        static_cast<UBreakIterator*>(iterator), reinterpret_cast<std::int32_t*>(0x10), 1, &status); }),
+        "rule status vector rejects an unwritable output");
+    Equal(status, 0, "rule status vector unwritable output preserves status");
+    Equal(errno, 71, "rule status vector unwritable output preserves errno");
+    Expect(Rejects([&] { ubrk_getRuleStatusVec_nid_postfix(
+        static_cast<UBreakIterator*>(iterator), statusValues, 1, reinterpret_cast<std::int32_t*>(0x10)); }),
+        "rule status vector rejects an unreadable status");
+    Equal(errno, 71, "rule status vector unreadable status preserves errno");
+    Expect(Rejects([&] { ubrk_getRuleStatusVec_nid_postfix(nullptr, statusValues, 1, &status); }),
+        "rule status vector rejects a null iterator");
+    Expect(Rejects([&] { ubrk_getRuleStatusVec_nid_postfix(
+        static_cast<UBreakIterator*>(iterator), nullptr, 1, &status); }),
+        "rule status vector rejects a null output with capacity");
+    Expect(Rejects([&] { ubrk_getRuleStatusVec_nid_postfix(
+        static_cast<UBreakIterator*>(iterator), statusValues, 1, nullptr); }),
+        "rule status vector rejects a null status");
+    ubrk_close(iterator);
     ubrk_close(nullptr);
     status = 0;
     Expect(!ubrk_open(99, "en", u"a", 1, &status), "invalid iterator type");
@@ -268,6 +330,8 @@ void Api() {
 }
 
 int main(int argc, char** argv) {
+    static_assert(std::is_same_v<decltype(&ubrk_getRuleStatusVec_nid_postfix),
+        std::int32_t (APS5_VABI*)(UBreakIterator*, std::int32_t*, std::int32_t, std::int32_t*)>);
     if (argc == 2) Unicode(std::stoi(argv[1]));
     else {
         SourceExamples();

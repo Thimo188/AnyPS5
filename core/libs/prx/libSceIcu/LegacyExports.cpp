@@ -405,10 +405,6 @@ int APS5_VABI _ZNK6icu_6810UnicodeSet12spanBackUTF8EPKci17USetSpanCondition_nid_
     NotImplemented_nid_no_patch(__func__);
 }
 
-int APS5_VABI ubrk_getRuleStatusVec_nid_postfix() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
 int APS5_VABI _ZNK6icu_6810Normalizer8getIndexEv_nid_postfix() {
     NotImplemented_nid_no_patch(__func__);
 }

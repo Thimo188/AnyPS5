@@ -99,7 +99,6 @@ int APS5_VABI _ZN6icu_6813LocaleBuilder25addUnicodeLocaleAttributeENS_11StringPi
 int APS5_VABI _ZN6icu_6813BreakIterator19getAvailableLocalesEv_nid_postfix();
 int APS5_VABI sceIcuLegacyUnknown_0ZHUcvkrLyI_nid_no_patch();
 int APS5_VABI _ZNK6icu_6810UnicodeSet12spanBackUTF8EPKci17USetSpanCondition_nid_postfix();
-int APS5_VABI ubrk_getRuleStatusVec_nid_postfix();
 int APS5_VABI _ZNK6icu_6810Normalizer8getIndexEv_nid_postfix();
 int APS5_VABI _ZThn8_N6icu_6813UnicodeFilterD1Ev_nid_postfix();
 int APS5_VABI _ZN6icu_6810UnicodeSet10setPatternEPKDsi_nid_postfix();

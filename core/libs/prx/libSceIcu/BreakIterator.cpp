@@ -3,6 +3,11 @@
 #include "unicode/ubrk.h"
 #include "unicode/uenum.h"
 #include "unicode/uloc.h"
+#include <algorithm>
+#include <cerrno>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 #undef ubrk_open
 #undef ubrk_close
@@ -16,8 +21,31 @@
 #undef ubrk_preceding
 #undef ubrk_isBoundary
 #undef ubrk_getRuleStatus
+#undef ubrk_getRuleStatusVec
 #undef ubrk_countAvailable
 #undef ubrk_getAvailable
+
+namespace {
+
+std::int32_t ReadStatus(const std::int32_t* status, const char* caller) {
+    if (!status) throw std::invalid_argument(std::string(caller) + ": invalid argument");
+    std::int32_t value = 0;
+    const int savedErrno = errno;
+    const bool readable = GuestCopyIn_nid_no_patch(&value, status, sizeof(value));
+    errno = savedErrno;
+    if (!readable) throw std::invalid_argument(std::string(caller) + ": unreadable status");
+    return value;
+}
+
+void WriteStatus(std::int32_t* status, std::int32_t incoming, std::int32_t outgoing, const char* caller) {
+    if (outgoing == incoming) return;
+    const int savedErrno = errno;
+    const bool writable = GuestCopyOut_nid_no_patch(status, &outgoing, sizeof(outgoing));
+    errno = savedErrno;
+    if (!writable) throw std::invalid_argument(std::string(caller) + ": unwritable status");
+}
+
+}
 
 extern "C" {
 
@@ -84,6 +112,32 @@ std::int8_t APS5_VABI ubrk_isBoundary(void* iterator, std::int32_t offset) {
 std::int32_t APS5_VABI ubrk_getRuleStatus(void* iterator) {
     if (!iterator) APS5_INVALID_ARG_EX;
     return ubrk_getRuleStatus_78(static_cast<UBreakIterator*>(iterator));
+}
+
+std::int32_t APS5_VABI ubrk_getRuleStatusVec_nid_postfix(
+    UBreakIterator* iterator, std::int32_t* fillInVec, std::int32_t capacity, std::int32_t* status) {
+    const auto incoming = ReadStatus(status, __func__);
+    if (incoming > 0) return 0;
+    if (!iterator || (!fillInVec && capacity > 0)) APS5_INVALID_ARG_EX;
+    auto local = static_cast<UErrorCode>(incoming);
+    const auto count = ubrk_getRuleStatusVec_78(iterator, nullptr, 0, &local);
+    if (count <= 0) {
+        WriteStatus(status, incoming, local, __func__);
+        return count;
+    }
+    std::vector<std::int32_t> values(static_cast<std::size_t>(count));
+    local = static_cast<UErrorCode>(incoming);
+    const auto result = ubrk_getRuleStatusVec_78(iterator, values.data(), count, &local);
+    const auto copied = (std::min)((std::max)(capacity, 0), result);
+    if (copied > 0) {
+        const int savedErrno = errno;
+        const bool writable = GuestCopyOut_nid_no_patch(fillInVec, values.data(), static_cast<std::size_t>(copied) * sizeof(values[0]));
+        errno = savedErrno;
+        if (!writable) throw std::invalid_argument(std::string(__func__) + ": unwritable output");
+    }
+    if (capacity < result) local = U_BUFFER_OVERFLOW_ERROR;
+    WriteStatus(status, incoming, local, __func__);
+    return result;
 }
 
 std::int32_t APS5_VABI ubrk_countAvailable() {
