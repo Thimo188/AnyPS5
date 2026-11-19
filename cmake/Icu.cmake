@@ -42,6 +42,7 @@ add_library(icu_common STATIC EXCLUDE_FROM_ALL
     ${ICU_SOURCE_DIR}/common/propname.cpp
     ${ICU_SOURCE_DIR}/common/putil.cpp
     ${ICU_SOURCE_DIR}/common/ruleiter.cpp
+    ${ICU_SOURCE_DIR}/common/rbbidata.cpp
     ${ICU_SOURCE_DIR}/common/stringpiece.cpp
     ${ICU_SOURCE_DIR}/common/uarrsort.cpp
     ${ICU_SOURCE_DIR}/common/ubidi.cpp

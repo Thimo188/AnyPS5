@@ -255,7 +255,9 @@ int APS5_VABI _ZNK6icu_6819FilteredNormalizer216getDecompositionEiRNS_13UnicodeS
 int APS5_VABI sceIcuLegacyUnknown_5KHYziMl9Bs_nid_no_patch();
 int APS5_VABI _ZN6icu_6816ReorderingBuffer6removeEv_nid_postfix();
 int APS5_VABI sceIcuLegacyUnknown_5NBMAeDDAR0_nid_no_patch();
-int APS5_VABI ubrk_swap_nid_postfix();
+struct UDataSwapper;
+std::int32_t APS5_VABI ubrk_swap_nid_postfix(const UDataSwapper* swapper, const void* input, std::int32_t length,
+                                             void* output, std::int32_t* status);
 int APS5_VABI _ZN6icu_686Locale9getKoreanEv_nid_postfix();
 int APS5_VABI sceIcuLegacyUnknown_5OpUyueKjdo_nid_no_patch();
 int APS5_VABI _ZN6icu_689UVector329retainAllERKS0__nid_postfix();
