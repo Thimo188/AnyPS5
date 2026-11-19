@@ -1174,7 +1174,6 @@ int APS5_VABI _ZN6icu_6813UnicodeStringC2Eiii_nid_postfix();
 int APS5_VABI _ZN6icu_6811ICU_Utility12appendNumberERNS_13UnicodeStringEiii_nid_postfix();
 int APS5_VABI _ZNK6icu_6817CanonicalIterator17getDynamicClassIDEv_nid_postfix();
 int APS5_VABI sceIcuLegacyUnknown_UhSI5QqNY7M_nid_no_patch();
-int APS5_VABI ures_getVersionNumber_nid_postfix();
 int APS5_VABI _ZN6icu_6823StringCharacterIteratorC2Ev_nid_postfix();
 int APS5_VABI _ZN6icu_685Edits9growArrayEv_nid_postfix();
 int APS5_VABI _ZN6icu_6817StringTrieBuilderD2Ev_nid_postfix();

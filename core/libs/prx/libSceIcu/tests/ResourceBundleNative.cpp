@@ -33,7 +33,7 @@ void Check(const char* path) {
     udata_setFileAccess(UDATA_NO_FILES, &status);
     Require(U_SUCCESS(status), "use registered packages without external files");
     auto* root = ures_openDirect(nullptr, "aps5ResourceFixture", &status);
-    Require(root && U_SUCCESS(status) && ures_getType(root) == URES_TABLE && ures_getSize(root) == 9, "official genrb/icupkg fixture is a real resource table");
+    Require(root && U_SUCCESS(status) && ures_getType(root) == URES_TABLE && ures_getSize(root) == 10, "official genrb/icupkg fixture is a real resource table");
     std::int32_t length = -1;
     const auto* greeting = ures_getStringByKey(root, "greeting", &length, &status);
     Require(greeting && U_SUCCESS(status) && std::u16string_view(greeting, length) == u"h\u00e9llo \u4e16\u754c", "Unicode string data");

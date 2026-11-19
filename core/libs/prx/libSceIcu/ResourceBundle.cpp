@@ -1,3 +1,13 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
+/*
+******************************************************************************
+* Copyright (C) 1997-2016, International Business Machines Corporation and
+* others. All Rights Reserved.
+******************************************************************************
+*/
+// https://github.com/unicode-org/icu/blob/84e1f26ea77152936e70d53178a816dbfbf69989/icu4c/source/common/uresbund.cpp
+
 #include "prx/libSceIcu/ResourceBundle.hpp"
 #include "prx/libSceIcu/ResourceBundleBackend.hpp"
 #include "prx/libSceIcu/Enumeration.hpp"
@@ -236,6 +246,12 @@ const char* APS5_VABI ures_getKey_nid_postfix(const UResourceBundle* handle) {
     const auto owner = Find(handle);
     const std::lock_guard lock(owner->mutex);
     return IcuResourceBackend::Key_nid_no_patch(owner->native.get());
+}
+const char* APS5_VABI ures_getVersionNumber_nid_postfix(const UResourceBundle* handle) {
+    if (!handle) return nullptr;
+    const auto owner = Find(handle);
+    const std::lock_guard lock(owner->mutex);
+    return IcuResourceBackend::VersionNumber_nid_no_patch(owner->native.get());
 }
 const char16_t* APS5_VABI ures_getString_nid_postfix(const UResourceBundle* handle, std::int32_t* length, std::int32_t* status) {
     return String(handle, 0, nullptr, 0, length, status);

@@ -53,6 +53,7 @@ void Check(const char* path, const char* package) {
     const auto count = reinterpret_cast<decltype(&ures_getSize_nid_postfix)>(import("JZ5yszZEFEY"));
     const auto type = reinterpret_cast<decltype(&ures_getType_nid_postfix)>(import("XUT0dUajUrA"));
     const auto key = reinterpret_cast<decltype(&ures_getKey_nid_postfix)>(import("m7ZpRaRI5LM"));
+    const auto version = reinterpret_cast<decltype(&ures_getVersionNumber_nid_postfix)>(import("UhTHf-qYOu4"));
     const auto string = reinterpret_cast<decltype(&ures_getString_nid_postfix)>(import("Ei1Dn07XYs4"));
     const auto stringByKey = reinterpret_cast<decltype(&ures_getStringByKey)>(import("apt8-c9wFxQ"));
     const auto stringByIndex = reinterpret_cast<decltype(&ures_getStringByIndex_nid_postfix)>(import("iyv2v10Y3ho"));
@@ -65,7 +66,8 @@ void Check(const char* path, const char* package) {
     fileAccess(3, &status);
     Require(status <= 0, "actual NID disables external resource files");
     auto* root = direct(nullptr, "aps5ResourceFixture", &status);
-    Require(root && status <= 0 && type(root) == 2 && count(root) == 9, "actual NIDs open and describe the compiled table");
+    Require(root && status <= 0 && type(root) == 2 && count(root) == 10, "actual NIDs open and describe the compiled table");
+    Require(std::string_view(version(root)) == "3.14.159", "actual NID reads and caches the resource version");
     std::int32_t length = -1;
     const auto* greeting = stringByKey(root, "greeting", &length, &status);
     Require(greeting && status <= 0 && std::u16string_view(greeting, length) == u"h\u00e9llo \u4e16\u754c", "actual NID reads Unicode string by key");

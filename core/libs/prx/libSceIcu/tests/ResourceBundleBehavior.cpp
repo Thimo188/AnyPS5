@@ -13,11 +13,14 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 namespace {
 
 using IcuRecoveredTest::Require;
+
+static_assert(std::is_same_v<decltype(&ures_getVersionNumber_nid_postfix), const char* (APS5_VABI*)(const UResourceBundle*)>);
 
 struct Package {
     std::vector<std::max_align_t> storage;
@@ -123,7 +126,7 @@ void Value(const Bundle& bundle, int operation, std::int32_t incoming = 0, bool 
 void Literals() {
     Bundle root;
     root.Metadata();
-    Require(ures_getSize_nid_postfix(root.guest) == 9 && ures_getType_nid_postfix(root.guest) == 2, "fixed real resource-table metadata");
+    Require(ures_getSize_nid_postfix(root.guest) == 10 && ures_getType_nid_postfix(root.guest) == 2, "fixed real resource-table metadata");
     std::int32_t status = 0;
     std::int32_t length = -1;
     const auto* greeting = ures_getStringByKey(root.guest, "greeting", &length, &status);
@@ -146,7 +149,7 @@ void Literals() {
     Bundle locale("en_US", false);
     Bundle elements(locale, "NumberElements");
     Require(ures_getType_nid_postfix(elements.guest) == 2, "normal locale fallback resolves actual NumberElements table");
-    for (const auto* key : {"greeting", "values", "nested", "number", "negative", "bytes", "vector", "empty", "alias", "missing"}) {
+    for (const auto* key : {"Version", "greeting", "values", "nested", "number", "negative", "bytes", "vector", "empty", "alias", "missing"}) {
         Bundle child(root, key);
         child.Metadata();
         for (auto incoming : {0, -1, -124, 7}) {
@@ -169,7 +172,7 @@ void FillIn() {
     Bundle root;
     Bundle fill(root, "number");
     std::set<std::string> keys;
-    for (int index = -1; index <= 9; ++index) {
+    for (int index = -1; index <= 10; ++index) {
         std::int32_t status = 0;
         std::int32_t expected = 0;
         auto* wanted = ResourceOracleChild(root.native, nullptr, index, false, fill.native, &expected);
@@ -181,7 +184,7 @@ void FillIn() {
             Require(key && keys.emplace(key).second, "full indexed table walk returns distinct keys");
         }
     }
-    Require(keys.size() == 9, "every actual table key is visited");
+    Require(keys.size() == 10, "every actual table key is visited");
     for (const auto* key : {"greeting", "nested", "missing", "number"}) {
         std::int32_t status = 0;
         std::int32_t expected = 0;
@@ -270,6 +273,35 @@ void Lifetime() {
     unumsys_close_nid_postfix(numbering);
 }
 
+void Version() {
+    Require(ures_getVersionNumber_nid_postfix(nullptr) == nullptr, "null resource has no version number");
+    Bundle root;
+    const auto compare = [](const Bundle& bundle) {
+        const auto* actual = ures_getVersionNumber_nid_postfix(bundle.guest);
+        const auto* expected = ResourceOracleVersionNumber(bundle.native);
+        Require(actual && expected && std::string_view(actual) == expected, "resource version matches native ICU");
+        Require(ures_getVersionNumber_nid_postfix(bundle.guest) == actual, "resource version pointer remains stable");
+    };
+    compare(root);
+    Require(std::string_view(ures_getVersionNumber_nid_postfix(root.guest)) == "3.14.159", "resource version uses the bundle Version string");
+    for (const auto* key : {"Version", "greeting", "values", "nested", "number", "negative", "bytes", "vector", "empty", "alias"}) {
+        Bundle child(root, key);
+        compare(child);
+    }
+    const auto* version = ures_getVersionNumber_nid_postfix(root.guest);
+    Bundle child(root, "greeting");
+    child.Close();
+    Require(std::string_view(version) == "3.14.159", "closing a child preserves the parent version pointer");
+    Refuses([&] { ures_getVersionNumber_nid_postfix(reinterpret_cast<UResourceBundle*>(std::uintptr_t{1})); });
+    std::array<std::max_align_t, 16> foreign{};
+    Refuses([&] { ures_getVersionNumber_nid_postfix(reinterpret_cast<UResourceBundle*>(foreign.data())); });
+    std::int32_t status = 0;
+    auto* stale = ures_openDirect_nid_postfix(nullptr, "aps5ResourceFixture", &status);
+    Require(stale && status <= 0 && ures_getVersionNumber_nid_postfix(stale), "version is available before close");
+    ures_close(stale);
+    Refuses([&] { ures_getVersionNumber_nid_postfix(stale); });
+}
+
 void Memory() {
     Bundle root;
     constexpr std::size_t page = 0x4000;
@@ -291,6 +323,7 @@ void Memory() {
     std::fill_n(key, 7, 'x');
     Refuses([&] { ures_getByKey(root.guest, key, nullptr, status); });
     Refuses([&] { ures_getType_nid_postfix(reinterpret_cast<UResourceBundle*>(data)); });
+    Refuses([&] { ures_getVersionNumber_nid_postfix(reinterpret_cast<UResourceBundle*>(data)); });
     auto* length = reinterpret_cast<std::int32_t*>(data + page + 4);
     *length = 0x55;
     const auto* text = ures_getStringByKey(root.guest, "greeting", length, status);
@@ -320,6 +353,7 @@ int main(int argc, char** argv) {
         else if (mode == "fillin") FillIn();
         else if (mode == "status") Status();
         else if (mode == "lifetime") Lifetime();
+        else if (mode == "version") Version();
         else if (mode == "memory") Memory();
         else Require(false, "unknown resource test mode");
     } catch (const std::exception& error) {
