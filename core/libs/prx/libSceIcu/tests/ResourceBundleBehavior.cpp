@@ -10,14 +10,19 @@
 #include <cstring>
 #include <exception>
 #include <fstream>
+#include <limits>
 #include <set>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 namespace {
 
 using IcuRecoveredTest::Require;
+
+static_assert(std::is_same_v<decltype(&ures_getLocaleByType_nid_postfix),
+    const char* (APS5_VABI*)(const UResourceBundle*, std::int32_t, std::int32_t*)>);
 
 struct Package {
     std::vector<std::max_align_t> storage;
@@ -98,6 +103,15 @@ void String(const Bundle& bundle, int mode = 0, const char* key = nullptr, int i
         (nullLength ? std::u16string_view(wanted) : std::u16string_view(wanted, nativeLength)), "entire resource string matches native");
 }
 
+void Locale(const Bundle& bundle, std::int32_t type, std::int32_t incoming = 0) {
+    auto status = incoming;
+    auto expected = incoming;
+    const auto* wanted = ResourceOracleLocale(bundle.native, type, &expected);
+    const auto* actual = ures_getLocaleByType_nid_postfix(bundle.guest, type, &status);
+    Require(bool(actual) == bool(wanted) && status == expected, "locale result and status match native");
+    if (actual) Require(std::string_view(actual) == wanted, "locale name matches native");
+}
+
 void Value(const Bundle& bundle, int operation, std::int32_t incoming = 0, bool nullLength = false) {
     auto status = incoming;
     auto expected = incoming;
@@ -123,6 +137,8 @@ void Value(const Bundle& bundle, int operation, std::int32_t incoming = 0, bool 
 void Literals() {
     Bundle root;
     root.Metadata();
+    for (auto type : {0, 1, 2, -1, 3, std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max()}) Locale(root, type);
+    for (auto incoming : {-1, -124, 7}) Locale(root, 0, incoming);
     Require(ures_getSize_nid_postfix(root.guest) == 9 && ures_getType_nid_postfix(root.guest) == 2, "fixed real resource-table metadata");
     std::int32_t status = 0;
     std::int32_t length = -1;
@@ -144,7 +160,11 @@ void Literals() {
     const auto* digits = ures_getStringByKey(latin.guest, "desc", &length, &status);
     Require(digits && status <= 0 && std::u16string_view(digits, length) == u"0123456789", "real production CLDR resource remains available");
     Bundle locale("en_US", false);
+    Locale(locale, 0);
+    Locale(locale, 1);
     Bundle elements(locale, "NumberElements");
+    Locale(elements, 0);
+    Locale(elements, 1);
     Require(ures_getType_nid_postfix(elements.guest) == 2, "normal locale fallback resolves actual NumberElements table");
     for (const auto* key : {"greeting", "values", "nested", "number", "negative", "bytes", "vector", "empty", "alias", "missing"}) {
         Bundle child(root, key);
@@ -222,6 +242,8 @@ void Status() {
             ures_getStringByIndex_nid_postfix(invalid, -1, length, status) == nullptr, "null/failed status precedes string handles and lengths");
         Require(ures_getBinary_nid_postfix(invalid, length, status) == nullptr && ures_getIntVector_nid_postfix(invalid, length, status) == nullptr &&
             ures_getInt_nid_postfix(invalid, status) == -1, "null/failed status precedes scalar/binary/vector access");
+        Require(ures_getLocaleByType_nid_postfix(invalid, std::numeric_limits<std::int32_t>::min(), status) == nullptr,
+            "null/failed status precedes locale handle and type");
         Require(failed == incoming, "failed status remains untouched");
     }
     Require(ures_getSize_nid_postfix(nullptr) == 0 && ures_getType_nid_postfix(nullptr) == -1 && ures_getKey_nid_postfix(nullptr) == nullptr,
@@ -233,6 +255,8 @@ void Status() {
     Require(ures_getByIndex_nid_postfix(nullptr, -1, fill, &status) == fill && status == 1, "null index parent reports argument error before fillIn access");
     status = 0;
     Require(ures_getString_nid_postfix(nullptr, &outputLength, &status) == nullptr && status == 1 && outputLength == 0x55, "null value source leaves unused length untouched");
+    status = 0;
+    Require(ures_getLocaleByType_nid_postfix(nullptr, 0, &status) == nullptr && status == 1, "null locale source reports argument error");
     Bundle root;
     for (auto incoming : {-1, -124, -128}) String(root, 1, "greeting", 0, incoming);
     status = 0;
@@ -240,6 +264,8 @@ void Status() {
     status = 0;
     Refuses([&] { ures_openDirect_nid_postfix(nullptr, nullptr, &status); });
     Refuses([&] { ures_getByKey(root.guest, "number", invalid, &status); });
+    status = 0;
+    Refuses([&] { ures_getLocaleByType_nid_postfix(invalid, 0, &status); });
     ures_close(nullptr);
 }
 
@@ -262,6 +288,8 @@ void Lifetime() {
         auto* fresh = ures_openDirect_nid_postfix(nullptr, "aps5ResourceFixture", &status);
         Require(fresh && fresh != closed, "closed resource identities are not reused");
         Refuses([&] { ures_getType_nid_postfix(closed); });
+        status = 0;
+        Refuses([&] { ures_getLocaleByType_nid_postfix(closed, 0, &status); });
         ures_close(fresh);
     }
     auto* numbering = unumsys_openByName_nid_postfix("latn", &status);
@@ -295,9 +323,12 @@ void Memory() {
     *length = 0x55;
     const auto* text = ures_getStringByKey(root.guest, "greeting", length, status);
     Require(text && *length == 8 && *status <= 0, "mapped exact resultLength write");
+    *status = 0;
+    Require(ures_getLocaleByType_nid_postfix(root.guest, 0, status) != nullptr && *status <= 0, "mapped exact locale status write");
     Require(sceKernelMprotect(data + page, page, 1) == 0);
     Refuses([&] { ures_getStringByKey(root.guest, "greeting", length, status); });
     Refuses([&] { ures_getInt_nid_postfix(root.guest, status); });
+    Refuses([&] { ures_getLocaleByType_nid_postfix(root.guest, 2, status); });
     Require(sceKernelMprotect(data + page, page, 3) == 0);
     *status = 7;
     Require(sceKernelMprotect(data + page, page, 1) == 0);
