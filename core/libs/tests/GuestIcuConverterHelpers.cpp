@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
+#include <type_traits>
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -35,6 +37,38 @@ void RequiresInvalidArgument(TCall call, const char* message = "null normalizati
         return;
     }
     Require(false, message);
+}
+
+void DefaultConverterName() {
+    static_assert(std::is_same_v<decltype(&ucnv_getDefaultName_nid_postfix), const char* (APS5_VABI*)()>);
+    const char* first = ucnv_getDefaultName_nid_postfix();
+    Require(first && *first, "default converter name is nonempty");
+#ifndef _WIN32
+    Require(std::strcmp(first, "UTF-8") == 0, "UTF-8 platform build has the fixed default name");
+    Require(setenv("LC_ALL", "C", 1) == 0 && setenv("LANG", "POSIX", 1) == 0, "change locale environment");
+    Require(ucnv_getDefaultName_nid_postfix() == first, "locale environment does not replace the fixed name");
+#endif
+    std::array<bool, 8> consistent{};
+    std::array<std::thread, 8> threads;
+    for (std::size_t index = 0; index < threads.size(); ++index) {
+        threads[index] = std::thread([&, index] {
+            for (int call = 0; call < 1000; ++call) {
+                const char* current = ucnv_getDefaultName_nid_postfix();
+                if (current != first || std::strcmp(current, first) != 0) return;
+            }
+            consistent[index] = true;
+        });
+    }
+    for (auto& thread : threads) thread.join();
+    Require(std::all_of(consistent.begin(), consistent.end(), [](bool value) { return value; }), "concurrent calls share the cached name");
+
+    std::int32_t status = 0;
+    UConverter* converter = u_getDefaultConverter_nid_postfix(&status);
+    Require(converter && status <= 0, "default converter opens for the reported name");
+    Require(ucnv_getDefaultName_nid_postfix() == first, "checked-out converter keeps the name storage");
+    u_releaseDefaultConverter_nid_postfix(converter);
+    u_flushDefaultConverter_nid_postfix();
+    Require(ucnv_getDefaultName_nid_postfix() == first, "flushing converter objects keeps the default name");
 }
 
 void DefaultConverterLifecycle() {
@@ -280,6 +314,7 @@ void SignatureGuestPointers() {
 }
 
 int main() {
+    DefaultConverterName();
     DefaultConverterLifecycle();
     NameMatching();
     Signatures();

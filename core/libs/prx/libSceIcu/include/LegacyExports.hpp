@@ -433,7 +433,6 @@ int APS5_VABI sceIcuLegacyUnknown_9sXRmxOZtsY_nid_no_patch();
 int APS5_VABI _ZN6icu_6813UnicodeString9setCharAtEiDs_nid_postfix();
 int APS5_VABI uenum_openFromStringEnumeration_nid_postfix();
 int APS5_VABI _ZN6icu_6817StringEnumeration8setCharsEPKciR10UErrorCode_nid_postfix();
-int APS5_VABI ucnv_getDefaultName_nid_postfix();
 int APS5_VABI sceIcuLegacyUnknown_AATyPI2mYE0_nid_no_patch();
 int APS5_VABI _ZNK6icu_6815Normalizer2Impl21isCanonSegmentStarterEi_nid_postfix();
 int APS5_VABI _ZN6icu_686Locale21getTraditionalChineseEv_nid_postfix();
