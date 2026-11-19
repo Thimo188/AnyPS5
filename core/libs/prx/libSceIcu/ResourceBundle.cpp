@@ -237,6 +237,20 @@ const char* APS5_VABI ures_getKey_nid_postfix(const UResourceBundle* handle) {
     const std::lock_guard lock(owner->mutex);
     return IcuResourceBackend::Key_nid_no_patch(owner->native.get());
 }
+const char* APS5_VABI ures_getLocaleInternal_nid_postfix(const UResourceBundle* handle, std::int32_t* error) {
+    const Status status(error);
+    if (status.Blocked()) return nullptr;
+    if (!handle) {
+        status.Write(1);
+        return nullptr;
+    }
+    const auto owner = Find(handle);
+    const std::lock_guard lock(owner->mutex);
+    auto after = status.before;
+    const auto* result = IcuResourceBackend::LocaleInternal_nid_no_patch(owner->native.get(), &after);
+    status.Write(after);
+    return result;
+}
 const char16_t* APS5_VABI ures_getString_nid_postfix(const UResourceBundle* handle, std::int32_t* length, std::int32_t* status) {
     return String(handle, 0, nullptr, 0, length, status);
 }

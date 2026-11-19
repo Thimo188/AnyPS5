@@ -53,6 +53,7 @@ void Check(const char* path, const char* package) {
     const auto count = reinterpret_cast<decltype(&ures_getSize_nid_postfix)>(import("JZ5yszZEFEY"));
     const auto type = reinterpret_cast<decltype(&ures_getType_nid_postfix)>(import("XUT0dUajUrA"));
     const auto key = reinterpret_cast<decltype(&ures_getKey_nid_postfix)>(import("m7ZpRaRI5LM"));
+    const auto localeInternal = reinterpret_cast<decltype(&ures_getLocaleInternal_nid_postfix)>(import("Qz6OvvsSneE"));
     const auto string = reinterpret_cast<decltype(&ures_getString_nid_postfix)>(import("Ei1Dn07XYs4"));
     const auto stringByKey = reinterpret_cast<decltype(&ures_getStringByKey)>(import("apt8-c9wFxQ"));
     const auto stringByIndex = reinterpret_cast<decltype(&ures_getStringByIndex_nid_postfix)>(import("iyv2v10Y3ho"));
@@ -66,11 +67,15 @@ void Check(const char* path, const char* package) {
     Require(status <= 0, "actual NID disables external resource files");
     auto* root = direct(nullptr, "aps5ResourceFixture", &status);
     Require(root && status <= 0 && type(root) == 2 && count(root) == 9, "actual NIDs open and describe the compiled table");
+    Require(std::string_view(localeInternal(root, &status)) == "aps5ResourceFixture" && status <= 0,
+        "actual NID returns the internal resource locale");
     std::int32_t length = -1;
     const auto* greeting = stringByKey(root, "greeting", &length, &status);
     Require(greeting && status <= 0 && std::u16string_view(greeting, length) == u"h\u00e9llo \u4e16\u754c", "actual NID reads Unicode string by key");
     auto* child = byKey(root, "number", nullptr, &status);
     Require(child && status <= 0 && type(child) == 7 && integer(child, &status) == 1234, "actual NIDs read integer resource");
+    Require(std::string_view(localeInternal(child, &status)) == "aps5ResourceFixture" && status <= 0,
+        "actual NID returns an internal child resource locale");
     Require(byKey(root, "negative", child, &status) == child && integer(child, &status) == -7 && status <= 0, "actual NIDs reuse fillIn identity for signed integer");
     Require(byKey(root, "bytes", child, &status) == child && status <= 0, "actual NID selects binary resource");
     const auto* bytes = binary(child, &length, &status);

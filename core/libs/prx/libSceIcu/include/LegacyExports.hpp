@@ -1029,7 +1029,6 @@ int APS5_VABI sceIcuLegacyUnknown_QryKIm1pddE_nid_no_patch();
 int APS5_VABI _ZN6icu_6823StringCharacterIteratorC1ERKNS_13UnicodeStringEi_nid_postfix();
 int APS5_VABI _ZN6icu_6810UCharsTrie25findUniqueValueFromBranchEPKDsiaRi_nid_postfix();
 int APS5_VABI _ZN6icu_6813UnicodeString8foldCaseEj_nid_postfix();
-int APS5_VABI ures_getLocaleInternal_nid_postfix();
 int APS5_VABI _ZNK6icu_6817UCharsTrieBuilder21getLimitOfLinearMatchEiii_nid_postfix();
 int APS5_VABI _ZN6icu_689UVector32D1Ev_nid_postfix();
 int APS5_VABI _ZN6icu_686UStackC2EPFvPvEPFa8UElementS4_ER10UErrorCode_nid_postfix();
