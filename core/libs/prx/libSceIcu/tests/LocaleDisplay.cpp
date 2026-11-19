@@ -16,6 +16,8 @@ static_assert(std::is_same_v<decltype(&uloc_getDisplayCountry_nid_postfix),
     std::int32_t (APS5_VABI*)(const char*, const char*, char16_t*, std::int32_t, std::int32_t*)>);
 static_assert(std::is_same_v<decltype(&uloc_getDisplayVariant_nid_postfix),
     std::int32_t (APS5_VABI*)(const char*, const char*, char16_t*, std::int32_t, std::int32_t*)>);
+static_assert(std::is_same_v<decltype(&uloc_getDisplayKeywordValue_nid_postfix),
+    std::int32_t (APS5_VABI*)(const char*, const char*, const char*, char16_t*, std::int32_t, std::int32_t*)>);
 
 namespace {
 
@@ -75,6 +77,61 @@ void CheckCase(NativeDisplay native, WrappedDisplay wrapped, const char* locale,
     Require(actual.output == expected.output);
 }
 
+Outcome CallNativeKeyword(
+    const char* locale,
+    const char* keyword,
+    const char* displayLocale,
+    std::int32_t capacity,
+    std::int32_t incoming) {
+    Outcome result{};
+    result.status = incoming;
+    result.output.fill(Sentinel);
+    const auto* resolvedLocale = locale ? locale : Icu::DefaultLocaleName();
+    const auto* resolvedDisplay = displayLocale ? displayLocale : Icu::DefaultLocaleName();
+    auto status = static_cast<UErrorCode>(incoming);
+    result.length = uloc_getDisplayKeywordValue(
+        resolvedLocale,
+        keyword,
+        resolvedDisplay,
+        capacity > 0 ? result.output.data() : nullptr,
+        capacity,
+        &status);
+    result.status = status;
+    return result;
+}
+
+Outcome CallWrapperKeyword(
+    const char* locale,
+    const char* keyword,
+    const char* displayLocale,
+    std::int32_t capacity,
+    std::int32_t incoming) {
+    Outcome result{};
+    result.status = incoming;
+    result.output.fill(Sentinel);
+    result.length = uloc_getDisplayKeywordValue_nid_postfix(
+        locale,
+        keyword,
+        displayLocale,
+        capacity > 0 ? result.output.data() : nullptr,
+        capacity,
+        &result.status);
+    return result;
+}
+
+void CheckKeywordCase(
+    const char* locale,
+    const char* keyword,
+    const char* displayLocale,
+    std::int32_t capacity,
+    std::int32_t incoming = 0) {
+    const auto expected = CallNativeKeyword(locale, keyword, displayLocale, capacity, incoming);
+    const auto actual = CallWrapperKeyword(locale, keyword, displayLocale, capacity, incoming);
+    Require(actual.length == expected.length);
+    Require(actual.status == expected.status);
+    Require(actual.output == expected.output);
+}
+
 void CheckBehavior() {
     constexpr const char* locales[] = {"sr_Latn", "zh_Hant_TW", "az_Cyrl", "en_US", "x-klingon"};
     constexpr const char* displays[] = {"en", "fr", "de"};
@@ -119,6 +176,31 @@ void CheckBehavior() {
     CheckCase(uloc_getDisplayVariant, uloc_getDisplayVariant_nid_postfix, "en_US_POSIX", "en", -1);
     CheckCase(uloc_getDisplayVariant, uloc_getDisplayVariant_nid_postfix, "en_US_POSIX", "en", 8, -127);
     CheckCase(uloc_getDisplayVariant, uloc_getDisplayVariant_nid_postfix, "en_US_POSIX", "en", 8, 1);
+
+    struct KeywordCase {
+        const char* locale;
+        const char* keyword;
+    };
+    constexpr KeywordCase keywordCases[] = {
+        {"de_DE@collation=phonebook", "collation"},
+        {"en_US@currency=USD", "currency"},
+        {"th_TH@calendar=buddhist", "calendar"},
+        {"es@numbers=latn", "numbers"},
+        {"en_US", "calendar"},
+        {"en_US@calendar=gregorian", ""},
+    };
+    for (const auto& value : keywordCases)
+        for (const auto* display : displays)
+            for (const auto capacity : capacities)
+                CheckKeywordCase(value.locale, value.keyword, display, capacity);
+    for (const auto capacity : capacities) {
+        CheckKeywordCase(nullptr, "calendar", "en", capacity);
+        CheckKeywordCase("th_TH@calendar=buddhist", "calendar", nullptr, capacity);
+        CheckKeywordCase(nullptr, "calendar", nullptr, capacity);
+    }
+    CheckKeywordCase("en_US@currency=USD", "currency", "en", -1);
+    CheckKeywordCase("en_US@currency=USD", "currency", "en", 8, -127);
+    CheckKeywordCase("en_US@currency=USD", "currency", "en", 8, 1);
 }
 
 template <typename Action>
@@ -186,8 +268,65 @@ void CheckGuestPointers() {
         uloc_getDisplayVariant_nid_postfix("en_US_POSIX", "en", reinterpret_cast<char16_t*>(0x10), 16, &status);
     });
     Require(errno == 78 && status == 0);
+    status = 0;
+    Require(uloc_getDisplayKeywordValue_nid_postfix(
+        reinterpret_cast<const char*>(0x10),
+        reinterpret_cast<const char*>(0x10),
+        reinterpret_cast<const char*>(0x10),
+        nullptr,
+        16,
+        &status) == 0);
+    Require(status == U_ILLEGAL_ARGUMENT_ERROR);
+    status = 0;
+    Require(uloc_getDisplayKeywordValue_nid_postfix(
+        reinterpret_cast<const char*>(0x10),
+        reinterpret_cast<const char*>(0x10),
+        reinterpret_cast<const char*>(0x10),
+        output.data(),
+        -1,
+        &status) == 0);
+    Require(status == U_ILLEGAL_ARGUMENT_ERROR);
+    status = 0;
+    errno = 79;
+    RequireInvalidArgument([&] {
+        uloc_getDisplayKeywordValue_nid_postfix(
+            "en_US@currency=USD", "currency", "en", reinterpret_cast<char16_t*>(0x10), 16, &status);
+    });
+    Require(errno == 79 && status == 0);
+    errno = 80;
+    RequireInvalidArgument([&] {
+        uloc_getDisplayKeywordValue_nid_postfix(
+            reinterpret_cast<const char*>(0x10), "currency", "en", output.data(), 16, &status);
+    });
+    Require(errno == 80 && status == 0);
+    errno = 81;
+    RequireInvalidArgument([&] {
+        uloc_getDisplayKeywordValue_nid_postfix(
+            "en_US@currency=USD", reinterpret_cast<const char*>(0x10), "en", output.data(), 16, &status);
+    });
+    Require(errno == 81 && status == 0);
+    errno = 82;
+    RequireInvalidArgument([&] {
+        uloc_getDisplayKeywordValue_nid_postfix(
+            "en_US@currency=USD", "currency", reinterpret_cast<const char*>(0x10), output.data(), 16, &status);
+    });
+    Require(errno == 82 && status == 0);
+    errno = 83;
+    RequireInvalidArgument([&] {
+        uloc_getDisplayKeywordValue_nid_postfix(
+            "en_US@currency=USD", nullptr, "en", output.data(), 16, &status);
+    });
+    Require(errno == 83 && status == 0);
     status = 1;
     Require(uloc_getDisplayScript_nid_postfix(
+        reinterpret_cast<const char*>(0x10),
+        reinterpret_cast<const char*>(0x10),
+        reinterpret_cast<char16_t*>(0x10),
+        16,
+        &status) == 0);
+    Require(status == 1);
+    Require(uloc_getDisplayKeywordValue_nid_postfix(
+        reinterpret_cast<const char*>(0x10),
         reinterpret_cast<const char*>(0x10),
         reinterpret_cast<const char*>(0x10),
         reinterpret_cast<char16_t*>(0x10),

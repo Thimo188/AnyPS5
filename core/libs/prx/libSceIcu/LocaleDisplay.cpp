@@ -61,6 +61,18 @@ std::string ReadText(const char* source, const char* caller, const char* name) {
     }
 }
 
+bool EqualAsciiInsensitive(const std::string& left, const char* right) {
+    const auto length = std::strlen(right);
+    if (left.size() != length) return false;
+    for (std::size_t index = 0; index < length; ++index) {
+        const auto lower = [](unsigned char value) {
+            return value >= 'A' && value <= 'Z' ? static_cast<unsigned char>(value + ('a' - 'A')) : value;
+        };
+        if (lower(static_cast<unsigned char>(left[index])) != lower(static_cast<unsigned char>(right[index]))) return false;
+    }
+    return true;
+}
+
 using DisplayFunction = std::int32_t (*)(const char*, const char*, char16_t*, std::int32_t, UErrorCode*);
 
 std::int32_t Display(
@@ -110,6 +122,60 @@ std::int32_t Display(
     return length;
 }
 
+std::int32_t DisplayKeywordValue(
+    const char* locale,
+    const char* keyword,
+    const char* displayLocale,
+    char16_t* output,
+    std::int32_t outputCapacity,
+    std::int32_t* status,
+    const char* caller) {
+    const auto incoming = ReadStatus(status, caller);
+    if (incoming > 0) return 0;
+    if (outputCapacity < 0 || (!output && outputCapacity > 0)) {
+        auto local = static_cast<UErrorCode>(incoming);
+        const auto length = uloc_getDisplayKeywordValue(
+            Icu::DefaultLocaleName(), "", Icu::DefaultLocaleName(), nullptr, outputCapacity, &local);
+        WriteStatus(status, incoming, local, caller);
+        return length;
+    }
+    if (!keyword) throw std::invalid_argument(std::string(caller) + ": invalid keyword");
+    const std::string localeText = locale ? ReadText(locale, caller, "locale") : Icu::DefaultLocaleName();
+    const std::string keywordText = ReadText(keyword, caller, "keyword");
+    const std::string displayText = displayLocale ? ReadText(displayLocale, caller, "display locale") : Icu::DefaultLocaleName();
+    auto local = static_cast<UErrorCode>(incoming);
+    if (outputCapacity == 0) {
+        const auto length = uloc_getDisplayKeywordValue(
+            localeText.c_str(), keywordText.c_str(), displayText.c_str(), nullptr, outputCapacity, &local);
+        WriteStatus(status, incoming, local, caller);
+        return length;
+    }
+    auto preflight = static_cast<UErrorCode>(incoming);
+    const auto required = uloc_getDisplayKeywordValue(
+        localeText.c_str(), keywordText.c_str(), displayText.c_str(), nullptr, 0, &preflight);
+    if (U_FAILURE(preflight) && preflight != U_BUFFER_OVERFLOW_ERROR) {
+        WriteStatus(status, incoming, preflight, caller);
+        return required;
+    }
+    const auto maximum = required >= 0 && required < (std::numeric_limits<std::int32_t>::max)()
+        ? required + 1
+        : outputCapacity;
+    const auto hostCapacity = (std::min)(outputCapacity, maximum);
+    std::vector<char16_t> host(static_cast<std::size_t>(hostCapacity));
+    local = static_cast<UErrorCode>(incoming);
+    const auto length = uloc_getDisplayKeywordValue(
+        localeText.c_str(), keywordText.c_str(), displayText.c_str(), host.data(), hostCapacity, &local);
+    if (U_SUCCESS(local) || local == U_BUFFER_OVERFLOW_ERROR) {
+        const auto copied = local == U_BUFFER_OVERFLOW_ERROR && EqualAsciiInsensitive(keywordText, "currency")
+            ? 0
+            : length >= hostCapacity ? hostCapacity : (std::max)(length + 1, 0);
+        if (copied > 0 && !CopyOut(output, host.data(), static_cast<std::size_t>(copied) * sizeof(char16_t)))
+            throw std::invalid_argument(std::string(caller) + ": unwritable output");
+    }
+    WriteStatus(status, incoming, local, caller);
+    return length;
+}
+
 }
 
 extern "C" {
@@ -139,6 +205,16 @@ std::int32_t APS5_VABI uloc_getDisplayVariant_nid_postfix(
     std::int32_t variantCapacity,
     std::int32_t* status) {
     return Display(locale, displayLocale, variant, variantCapacity, status, uloc_getDisplayVariant, __func__);
+}
+
+std::int32_t APS5_VABI uloc_getDisplayKeywordValue_nid_postfix(
+    const char* locale,
+    const char* keyword,
+    const char* displayLocale,
+    char16_t* output,
+    std::int32_t outputCapacity,
+    std::int32_t* status) {
+    return DisplayKeywordValue(locale, keyword, displayLocale, output, outputCapacity, status, __func__);
 }
 
 }
