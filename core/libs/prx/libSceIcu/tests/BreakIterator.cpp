@@ -1,6 +1,7 @@
 #include "prx/libSceIcu/libSceIcu.hpp"
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -8,6 +9,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 namespace {
@@ -24,6 +26,16 @@ void Equal(std::int32_t actual, std::int32_t expected, const char* what) {
     if (actual == expected) return;
     std::fprintf(stderr, "%s: %s: got %d, expected %d\n", Context.c_str(), what, actual, expected);
     std::abort();
+}
+
+template<typename TAction>
+bool Rejects(TAction&& action) {
+    try {
+        action();
+        return false;
+    } catch (const std::invalid_argument&) {
+        return true;
+    }
 }
 
 void Append(std::u16string& text, std::uint32_t point) {
@@ -206,6 +218,56 @@ void Api() {
     Equal(status, -128, "input warning preserved");
     Equal(ubrk_last(iterator), 2, "warning allows setText");
     ubrk_close(iterator);
+
+    iterator = Open(0);
+    status = 0;
+    ubrk_setText(iterator, u"ab", 2, &status);
+    Equal(ubrk_first(iterator), 0, "clone source first");
+    Equal(ubrk_next(iterator), 1, "clone source next");
+    std::int32_t bufferSize = 0;
+    auto* clone = ubrk_safeClone_nid_postfix(static_cast<const UBreakIterator*>(iterator), nullptr, &bufferSize, &status);
+    Expect(!clone, "safe clone preflight returns null");
+    Equal(bufferSize, 1, "safe clone preflight size");
+    Equal(status, 0, "safe clone preflight status");
+    clone = ubrk_safeClone_nid_postfix(static_cast<const UBreakIterator*>(iterator), reinterpret_cast<void*>(0x10), &bufferSize, &status);
+    Expect(clone != nullptr, "safe clone with ignored buffer");
+    Equal(bufferSize, 1, "safe clone result size");
+    Equal(status, -126, "safe clone allocation warning");
+    Equal(ubrk_current(clone), 1, "safe clone position");
+    Equal(ubrk_next(clone), 2, "safe clone advances");
+    Equal(ubrk_current(iterator), 1, "safe clone independent source");
+    ubrk_close(clone);
+    status = 0;
+    clone = ubrk_safeClone_nid_postfix(static_cast<const UBreakIterator*>(iterator), nullptr, nullptr, &status);
+    Expect(clone != nullptr, "safe clone without size");
+    Equal(status, 0, "safe clone without size status");
+    ubrk_close(clone);
+    status = -128;
+    clone = ubrk_safeClone_nid_postfix(static_cast<const UBreakIterator*>(iterator), nullptr, nullptr, &status);
+    Expect(clone != nullptr, "safe clone with warning");
+    Equal(status, -128, "safe clone preserves warning without size");
+    ubrk_close(clone);
+    status = 15;
+    Expect(!ubrk_safeClone_nid_postfix(reinterpret_cast<const UBreakIterator*>(0x10), reinterpret_cast<void*>(0x10),
+        reinterpret_cast<std::int32_t*>(0x10), &status), "safe clone incoming failure");
+    Equal(status, 15, "safe clone incoming failure status");
+    status = 0;
+    bufferSize = 7;
+    Expect(!ubrk_safeClone_nid_postfix(nullptr, nullptr, &bufferSize, &status), "safe clone null iterator");
+    Equal(status, 1, "safe clone null iterator status");
+    Equal(bufferSize, 7, "safe clone null iterator size extent");
+    Expect(!ubrk_safeClone_nid_postfix(reinterpret_cast<const UBreakIterator*>(0x10), reinterpret_cast<void*>(0x10),
+        reinterpret_cast<std::int32_t*>(0x10), nullptr), "safe clone null status");
+    status = 0;
+    errno = 71;
+    Expect(Rejects([&] { ubrk_safeClone_nid_postfix(static_cast<const UBreakIterator*>(iterator), nullptr,
+        reinterpret_cast<std::int32_t*>(0x10), &status); }), "safe clone rejects unreadable size");
+    Equal(status, 0, "safe clone unreadable size status extent");
+    Equal(errno, 71, "safe clone unreadable size errno");
+    Expect(Rejects([&] { ubrk_safeClone_nid_postfix(static_cast<const UBreakIterator*>(iterator), nullptr,
+        nullptr, reinterpret_cast<std::int32_t*>(0x10)); }), "safe clone rejects unreadable status");
+    Equal(errno, 71, "safe clone unreadable status errno");
+    ubrk_close(iterator);
     ubrk_close(nullptr);
     status = 0;
     Expect(!ubrk_open(99, "en", u"a", 1, &status), "invalid iterator type");
@@ -268,6 +330,8 @@ void Api() {
 }
 
 int main(int argc, char** argv) {
+    static_assert(std::is_same_v<decltype(&ubrk_safeClone_nid_postfix),
+        UBreakIterator* (APS5_VABI*)(const UBreakIterator*, void*, std::int32_t*, std::int32_t*)>);
     if (argc == 2) Unicode(std::stoi(argv[1]));
     else {
         SourceExamples();

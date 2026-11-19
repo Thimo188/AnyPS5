@@ -3,6 +3,9 @@
 #include "unicode/ubrk.h"
 #include "unicode/uenum.h"
 #include "unicode/uloc.h"
+#include <cerrno>
+#include <stdexcept>
+#include <string>
 
 #undef ubrk_open
 #undef ubrk_close
@@ -16,8 +19,29 @@
 #undef ubrk_preceding
 #undef ubrk_isBoundary
 #undef ubrk_getRuleStatus
+#undef ubrk_safeClone
 #undef ubrk_countAvailable
 #undef ubrk_getAvailable
+
+namespace {
+
+std::int32_t ReadGuestInt(const std::int32_t* source, const char* function) {
+    std::int32_t value = 0;
+    const int savedErrno = errno;
+    const bool copied = GuestCopyIn_nid_no_patch(&value, source, sizeof(value));
+    errno = savedErrno;
+    if (!copied) throw std::invalid_argument(std::string(function) + ": unreadable argument");
+    return value;
+}
+
+void WriteGuestInt(std::int32_t* destination, std::int32_t value, const char* function) {
+    const int savedErrno = errno;
+    const bool copied = GuestCopyOut_nid_no_patch(destination, &value, sizeof(value));
+    errno = savedErrno;
+    if (!copied) throw std::invalid_argument(std::string(function) + ": unwritable argument");
+}
+
+}
 
 extern "C" {
 
@@ -84,6 +108,37 @@ std::int8_t APS5_VABI ubrk_isBoundary(void* iterator, std::int32_t offset) {
 std::int32_t APS5_VABI ubrk_getRuleStatus(void* iterator) {
     if (!iterator) APS5_INVALID_ARG_EX;
     return ubrk_getRuleStatus_78(static_cast<UBreakIterator*>(iterator));
+}
+
+UBreakIterator* APS5_VABI ubrk_safeClone_nid_postfix(
+    const UBreakIterator* iterator, void*, std::int32_t* bufferSize, std::int32_t* status) {
+    if (!status) return nullptr;
+    const auto incoming = ReadGuestInt(status, __func__);
+    if (incoming > 0) return nullptr;
+    auto localStatus = static_cast<UErrorCode>(incoming);
+    if (!iterator) {
+        auto* result = ubrk_safeClone_78(nullptr, nullptr, nullptr, &localStatus);
+        if (localStatus != incoming) WriteGuestInt(status, localStatus, __func__);
+        return result;
+    }
+    std::int32_t localSize = 0;
+    std::int32_t* size = nullptr;
+    if (bufferSize) {
+        localSize = ReadGuestInt(bufferSize, __func__);
+        WriteGuestInt(bufferSize, 1, __func__);
+        if (localSize == 0) return nullptr;
+        size = &localSize;
+    }
+    auto* result = ubrk_safeClone_78(iterator, nullptr, size, &localStatus);
+    if (localStatus != incoming) {
+        try {
+            WriteGuestInt(status, localStatus, __func__);
+        } catch (...) {
+            ubrk_close_78(result);
+            throw;
+        }
+    }
+    return result;
 }
 
 std::int32_t APS5_VABI ubrk_countAvailable() {

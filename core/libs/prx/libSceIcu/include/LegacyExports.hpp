@@ -130,7 +130,6 @@ int APS5_VABI _ZN6icu_6813LocaleUtility21canonicalLocaleStringEPKNS_13UnicodeStr
 int APS5_VABI _ZNK6icu_6817UCharsTrieBuilder23skipElementsBySomeUnitsEiii_nid_postfix();
 int APS5_VABI _ZN6icu_686Locale9getFranceEv_nid_postfix();
 int APS5_VABI sceIcuLegacyUnknown_1nek04WkGb0_nid_no_patch();
-int APS5_VABI ubrk_safeClone_nid_postfix();
 int APS5_VABI _ZNK6icu_6813UnicodeString7toUTF32EPiiR10UErrorCode_nid_postfix();
 int APS5_VABI _ZNK6icu_6813UnicodeString9doIndexOfEiii_nid_postfix();
 int APS5_VABI _ZN6icu_6816LocaleKeyFactoryD0Ev_nid_postfix();

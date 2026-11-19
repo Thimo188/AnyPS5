@@ -535,10 +535,6 @@ int APS5_VABI sceIcuLegacyUnknown_1nek04WkGb0_nid_no_patch() {
 }
 APS5_EXPORT("1nek04WkGb0", sceIcuLegacyUnknown_1nek04WkGb0_nid_no_patch);
 
-int APS5_VABI ubrk_safeClone_nid_postfix() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
 int APS5_VABI _ZNK6icu_6813UnicodeString7toUTF32EPiiR10UErrorCode_nid_postfix() {
     NotImplemented_nid_no_patch(__func__);
 }
