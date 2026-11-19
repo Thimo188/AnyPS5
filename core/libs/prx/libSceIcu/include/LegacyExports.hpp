@@ -206,7 +206,6 @@ int APS5_VABI _ZN6icu_6823FullCaseFoldingIteratorC2Ev_nid_postfix();
 int APS5_VABI ucnv_getMaxCharSize_nid_postfix();
 int APS5_VABI _ZN6icu_689UVector3212setElementAtEii_nid_postfix();
 int APS5_VABI sceIcuLegacyUnknown_40y5c743WCw_nid_no_patch();
-int APS5_VABI ures_openDirectFillIn_nid_postfix();
 int APS5_VABI _ZN6icu_6822UCharCharacterIterator12firstPostIncEv_nid_postfix();
 int APS5_VABI _ZN6icu_6810UCharsTrieD2Ev_nid_postfix();
 int APS5_VABI uhash_initSize_nid_postfix();

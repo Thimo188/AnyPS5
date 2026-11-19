@@ -5,6 +5,7 @@ void ResourceOracleRegister(const void*, std::int32_t*);
 void ResourceOracleCleanup();
 std::int32_t ResourceOracleNoFiles();
 void* ResourceOracleOpen(const char*, const char*, bool, std::int32_t*);
+void ResourceOracleOpenDirectFillIn(void*, const char*, const char*, std::int32_t*);
 void ResourceOracleClose(void*);
 void* ResourceOracleChild(const void*, const char*, std::int32_t, bool, void*, std::int32_t*);
 std::int32_t ResourceOracleSize(const void*);

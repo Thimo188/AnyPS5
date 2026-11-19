@@ -47,6 +47,7 @@ void Check(const char* path, const char* package) {
     const auto cleanup = reinterpret_cast<decltype(&u_cleanup_nid_postfix)>(import("1SsridDRBYQ"));
     const auto open = reinterpret_cast<decltype(&ures_open)>(import("bpD6xUk4QVI"));
     const auto direct = reinterpret_cast<decltype(&ures_openDirect_nid_postfix)>(import("lh5Sirif1Js"));
+    const auto directFillIn = reinterpret_cast<decltype(&ures_openDirectFillIn_nid_postfix)>(import("41Ny9FV0dHg"));
     const auto close = reinterpret_cast<decltype(&ures_close)>(import("--GQ9Ov+0mM"));
     const auto byKey = reinterpret_cast<decltype(&ures_getByKey)>(import("8WDJjbxNvCg"));
     const auto byIndex = reinterpret_cast<decltype(&ures_getByIndex_nid_postfix)>(import("CJkitLFH-II"));
@@ -71,6 +72,10 @@ void Check(const char* path, const char* package) {
     Require(greeting && status <= 0 && std::u16string_view(greeting, length) == u"h\u00e9llo \u4e16\u754c", "actual NID reads Unicode string by key");
     auto* child = byKey(root, "number", nullptr, &status);
     Require(child && status <= 0 && type(child) == 7 && integer(child, &status) == 1234, "actual NIDs read integer resource");
+    directFillIn(child, nullptr, "aps5ResourceFixture", &status);
+    Require(status <= 0 && type(child) == 2 && count(child) == 9, "actual NID direct fill-in open preserves identity and replaces the resource");
+    child = byKey(root, "number", child, &status);
+    Require(child && status <= 0 && type(child) == 7 && integer(child, &status) == 1234, "actual NIDs reuse the direct fill-in handle for child selection");
     Require(byKey(root, "negative", child, &status) == child && integer(child, &status) == -7 && status <= 0, "actual NIDs reuse fillIn identity for signed integer");
     Require(byKey(root, "bytes", child, &status) == child && status <= 0, "actual NID selects binary resource");
     const auto* bytes = binary(child, &length, &status);

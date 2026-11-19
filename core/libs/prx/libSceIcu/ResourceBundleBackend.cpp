@@ -1,4 +1,5 @@
 #include "prx/libSceIcu/ResourceBundleBackend.hpp"
+#include "uresimp.h"
 #include "unicode/ures.h"
 #include <type_traits>
 
@@ -14,6 +15,11 @@ void* Open_nid_no_patch(const char* path, const char* name, bool direct, std::in
     auto* result = direct ? ures_openDirect(path, name, status ? &error : nullptr) : ures_open(path, name, status ? &error : nullptr);
     if (status) *status = error;
     return result;
+}
+void OpenDirectFillIn_nid_no_patch(void* handle, const char* path, const char* name, std::int32_t* status) {
+    auto error = status ? static_cast<UErrorCode>(*status) : U_ZERO_ERROR;
+    ures_openDirectFillIn(static_cast<UResourceBundle*>(handle), path, name, status ? &error : nullptr);
+    if (status) *status = error;
 }
 void Close_nid_no_patch(void* handle) { ures_close(static_cast<UResourceBundle*>(handle)); }
 void* Child_nid_no_patch(const void* handle, const char* key, std::int32_t index, bool byKey, void* fillIn, std::int32_t* status) {

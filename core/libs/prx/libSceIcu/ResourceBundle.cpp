@@ -96,6 +96,26 @@ UResourceBundle* Open(const char* path, const char* name, bool direct, std::int3
     }
 }
 
+void OpenDirectFillIn(UResourceBundle* fillIn, const char* path, const char* name, std::int32_t* error) {
+    const Status status(error);
+    if (status.Blocked()) return;
+    if (!fillIn) {
+        status.Write(1);
+        return;
+    }
+    try {
+        const auto owner = Find(fillIn);
+        const auto input = ReadName(name);
+        const auto package = path ? ReadName(path) : std::string();
+        const std::lock_guard lock(owner->mutex);
+        auto after = status.before;
+        IcuResourceBackend::OpenDirectFillIn_nid_no_patch(owner->native.get(), path ? package.c_str() : nullptr, input.c_str(), &after);
+        status.Write(after);
+    } catch (const std::bad_alloc&) {
+        status.Write(7);
+    }
+}
+
 UResourceBundle* ChildLocked(const std::shared_ptr<Entry>& parent, const char* key, std::int32_t index, bool byKey,
                              UResourceBundle* fillIn, const std::shared_ptr<Entry>& receiver, const Status& status) {
     if (byKey && IcuResourceBackend::Type_nid_no_patch(parent->native.get()) != 2) {
@@ -201,6 +221,9 @@ UResourceBundle* APS5_VABI ures_open(const char* path, const char* name, std::in
 }
 UResourceBundle* APS5_VABI ures_openDirect_nid_postfix(const char* path, const char* name, std::int32_t* status) {
     return Open(path, name, true, status);
+}
+void APS5_VABI ures_openDirectFillIn_nid_postfix(UResourceBundle* fillIn, const char* path, const char* name, std::int32_t* status) {
+    OpenDirectFillIn(fillIn, path, name, status);
 }
 void APS5_VABI ures_close(UResourceBundle* handle) {
     if (!handle) return;

@@ -866,10 +866,6 @@ int APS5_VABI sceIcuLegacyUnknown_40y5c743WCw_nid_no_patch() {
 }
 APS5_EXPORT("40y5c743WCw", sceIcuLegacyUnknown_40y5c743WCw_nid_no_patch);
 
-int APS5_VABI ures_openDirectFillIn_nid_postfix() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
 int APS5_VABI _ZN6icu_6822UCharCharacterIterator12firstPostIncEv_nid_postfix() {
     NotImplemented_nid_no_patch(__func__);
 }

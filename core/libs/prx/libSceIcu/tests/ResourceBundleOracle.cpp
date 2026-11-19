@@ -1,4 +1,5 @@
 #include "prx/libSceIcu/tests/ResourceBundleOracle.hpp"
+#include "uresimp.h"
 #include "unicode/ures.h"
 #include "unicode/udata.h"
 #include "unicode/uclean.h"
@@ -21,6 +22,11 @@ void* ResourceOracleOpen(const char* path, const char* name, bool direct, std::i
     auto* result = direct ? ures_openDirect(path, name, status ? &error : nullptr) : ures_open(path, name, status ? &error : nullptr);
     if (status) *status = error;
     return result;
+}
+void ResourceOracleOpenDirectFillIn(void* handle, const char* path, const char* name, std::int32_t* status) {
+    auto error = status ? static_cast<UErrorCode>(*status) : U_ZERO_ERROR;
+    ures_openDirectFillIn(static_cast<UResourceBundle*>(handle), path, name, status ? &error : nullptr);
+    if (status) *status = error;
 }
 void ResourceOracleClose(void* handle) { ures_close(static_cast<UResourceBundle*>(handle)); }
 void* ResourceOracleChild(const void* handle, const char* key, std::int32_t index, bool byKey, void* fillIn, std::int32_t* status) {

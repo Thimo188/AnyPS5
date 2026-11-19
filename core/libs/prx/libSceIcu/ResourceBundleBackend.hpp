@@ -4,6 +4,7 @@
 namespace IcuResourceBackend {
 
 void* Open_nid_no_patch(const char*, const char*, bool, std::int32_t*);
+void OpenDirectFillIn_nid_no_patch(void*, const char*, const char*, std::int32_t*);
 void Close_nid_no_patch(void*);
 void* Child_nid_no_patch(const void*, const char*, std::int32_t, bool, void*, std::int32_t*);
 std::int32_t Size_nid_no_patch(const void*);

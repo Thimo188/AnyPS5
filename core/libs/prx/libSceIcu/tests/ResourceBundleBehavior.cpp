@@ -168,6 +168,15 @@ void Literals() {
 void FillIn() {
     Bundle root;
     Bundle fill(root, "number");
+    std::int32_t openStatus = 0;
+    std::int32_t expectedOpenStatus = 0;
+    ResourceOracleOpenDirectFillIn(fill.native, nullptr, "aps5ResourceFixture", &expectedOpenStatus);
+    ures_openDirectFillIn_nid_postfix(fill.guest, nullptr, "aps5ResourceFixture", &openStatus);
+    Require(openStatus == expectedOpenStatus && openStatus <= 0, "direct fill-in open matches native status");
+    fill.Metadata();
+    Require(ures_getType_nid_postfix(fill.guest) == 2 && ures_getSize_nid_postfix(fill.guest) == 9,
+        "direct fill-in open preserves identity and replaces the selected value");
+    String(fill, 1, "greeting");
     std::set<std::string> keys;
     for (int index = -1; index <= 9; ++index) {
         std::int32_t status = 0;
@@ -216,6 +225,7 @@ void Status() {
         auto* status = incoming ? &failed : nullptr;
         Require(ures_open(key, key, status) == nullptr, "null/failed status precedes open inputs");
         Require(ures_openDirect_nid_postfix(key, key, status) == nullptr, "null/failed status precedes direct-open inputs");
+        ures_openDirectFillIn_nid_postfix(invalid, key, key, status);
         Require(ures_getByKey(invalid, key, fill, status) == fill, "null/failed status returns untouched foreign fillIn for key lookup");
         Require(ures_getByIndex_nid_postfix(invalid, -1, fill, status) == fill, "null/failed status returns untouched foreign fillIn for index lookup");
         Require(ures_getString_nid_postfix(invalid, length, status) == nullptr && ures_getStringByKey(invalid, key, length, status) == nullptr &&
@@ -239,6 +249,15 @@ void Status() {
     Refuses([&] { ures_open(nullptr, nullptr, &status); });
     status = 0;
     Refuses([&] { ures_openDirect_nid_postfix(nullptr, nullptr, &status); });
+    status = 0;
+    std::int32_t expected = 0;
+    ResourceOracleOpenDirectFillIn(nullptr, key, key, &expected);
+    ures_openDirectFillIn_nid_postfix(nullptr, key, key, &status);
+    Require(status == expected && status == 1, "null direct fill-in reports native argument error before path and locale access");
+    status = 0;
+    Refuses([&] { ures_openDirectFillIn_nid_postfix(invalid, nullptr, nullptr, &status); });
+    status = 0;
+    Refuses([&] { ures_openDirectFillIn_nid_postfix(root.guest, nullptr, nullptr, &status); });
     Refuses([&] { ures_getByKey(root.guest, "number", invalid, &status); });
     ures_close(nullptr);
 }
